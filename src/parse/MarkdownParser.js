@@ -19,6 +19,29 @@ export class MarkdownParser {
             linkify,
             breaks,
         }));
+
+        // Add custom block rule to handle empty lines as empty paragraphs
+        this.md.block.ruler.before('paragraph', 'empty_line', (state, startLine, endLine, silent) => {
+            const pos = state.bMarks[startLine] + state.tShift[startLine];
+            const max = state.eMarks[startLine];
+
+            // Check if the line is empty (after trimming)
+            if (pos >= max) {
+                if (!silent) {
+                    // Create an empty paragraph
+                    const token = state.push('paragraph_open', 'p', 1);
+                    token.map = [startLine, startLine];
+                    // Add empty inline content
+                    const inlineToken = state.push('inline', '', 0);
+                    inlineToken.content = '';
+                    inlineToken.children = [];
+                    state.push('paragraph_close', 'p', -1);
+                }
+                state.line = startLine + 1;
+                return true;
+            }
+            return false;
+        });
     }
 
     parse(content, { inline } = {}) {
